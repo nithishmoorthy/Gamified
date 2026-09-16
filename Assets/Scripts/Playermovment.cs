@@ -20,12 +20,12 @@ public class Playermovment : MonoBehaviour
             rb.AddForce(0, 0, forwardforce * Time.deltaTime);
         }
 
-        if (Input.GetKey("d") || mobileRight)
+        if ((Input.GetKey("d") || mobileRight))
         {
             rb.AddForce(sideforce * Time.deltaTime, 0, 0, ForceMode.VelocityChange);
         }
 
-        if (Input.GetKey("a") || mobileLeft)
+        if ((Input.GetKey("a") || mobileLeft))
         {
             rb.AddForce(-sideforce * Time.deltaTime, 0, 0, ForceMode.VelocityChange);
         }

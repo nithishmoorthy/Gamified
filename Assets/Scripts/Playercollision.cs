@@ -5,14 +5,14 @@ public class Playercollision : MonoBehaviour
     public Playermovment movement;
     public AudioSource correct;
     public AudioSource wrong;
-    void OnCollisionEnter(Collision collisioninfo)
-    {
-        if (collisioninfo.collider.tag == "Obstacle")
-        {
-            movement.enabled = false;
-            gamemanager.GameOver();
-        }
-    }
+    //void OnCollisionEnter(Collision collisioninfo)
+    //{
+        //if (collisioninfo.collider.tag == "Obstacle")
+        //{
+            //movement.enabled = false;
+            //gamemanager.GameOver();
+        //}
+    //}
 
     private void OnTriggerEnter(Collider other)
     {
