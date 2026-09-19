@@ -11,6 +11,7 @@ public class Scorescript : MonoBehaviour
     private FirebaseFirestore db;
     private string[] questions = new string[5];
     private int currentQuestion = -1;
+    private int[] correctAnswers = new int[5];
 
     void Start()
     {
@@ -38,6 +39,8 @@ public class Scorescript : MonoBehaviour
                             string option1 = snapshot.GetValue<string>("Option 1");
                             string option2 = snapshot.GetValue<string>("Option 2");
                             string option3 = snapshot.GetValue<string>("Option 3");
+                            int correctAnswer = snapshot.GetValue<int>("correctAnswer");
+                            correctAnswers[index] = correctAnswer;
 
                             questions[index] =
                                 question + "\n" +
@@ -73,6 +76,17 @@ public class Scorescript : MonoBehaviour
             {
                 currentQuestion = questionNumber;
                 scoretext.text = questions[questionNumber];
+
+                QuestionSection[] sections = FindObjectsByType<QuestionSection>(FindObjectsSortMode.None);
+
+                foreach (QuestionSection section in sections)
+                {
+                    if (section.questionIndex == questionNumber)
+                    {
+                        section.Setup(questionNumber, correctAnswers[questionNumber]);
+                        break;
+                    }
+                }
             }
         }
     }
