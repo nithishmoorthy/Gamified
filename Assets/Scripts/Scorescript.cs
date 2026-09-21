@@ -9,8 +9,8 @@ public class Scorescript : MonoBehaviour
     public Text scoretext;
 
     private FirebaseFirestore db;
+
     private string[] questions = new string[5];
-    private int currentQuestion = -1;
     private int[] correctAnswers = new int[5];
 
     void Start()
@@ -40,6 +40,7 @@ public class Scorescript : MonoBehaviour
                             string option2 = snapshot.GetValue<string>("Option 2");
                             string option3 = snapshot.GetValue<string>("Option 3");
                             int correctAnswer = snapshot.GetValue<int>("correctAnswer");
+
                             correctAnswers[index] = correctAnswer;
 
                             questions[index] =
@@ -47,6 +48,23 @@ public class Scorescript : MonoBehaviour
                                 "1. " + option1 + "      " +
                                 "2. " + option2 + "      " +
                                 "3. " + option3;
+
+                            QuestionSection[] sections =
+                                FindObjectsByType<QuestionSection>(FindObjectsSortMode.None);
+
+                            foreach (QuestionSection section in sections)
+                            {
+                                if (section.questionIndex == index)
+                                {
+                                    section.Setup(
+                                        index,
+                                        questions[index],
+                                        correctAnswers[index]
+                                    );
+
+                                    break;
+                                }
+                            }
 
                             Debug.Log(id + " loaded!");
                         }
@@ -64,30 +82,6 @@ public class Scorescript : MonoBehaviour
         if (player.position.z >= 500)
         {
             scoretext.text = "Level Complete!";
-            return;
-        }
-
-        int questionNumber = Mathf.FloorToInt(player.position.z / 100);
-
-        if (questionNumber != currentQuestion &&
-            questionNumber < questions.Length)
-        {
-            if (!string.IsNullOrEmpty(questions[questionNumber]))
-            {
-                currentQuestion = questionNumber;
-                scoretext.text = questions[questionNumber];
-
-                QuestionSection[] sections = FindObjectsByType<QuestionSection>(FindObjectsSortMode.None);
-
-                foreach (QuestionSection section in sections)
-                {
-                    if (section.questionIndex == questionNumber)
-                    {
-                        section.Setup(questionNumber, correctAnswers[questionNumber]);
-                        break;
-                    }
-                }
-            }
         }
     }
 }

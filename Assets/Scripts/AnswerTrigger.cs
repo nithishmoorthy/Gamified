@@ -22,7 +22,6 @@ public class AnswerTrigger : MonoBehaviour
             return;
         }
 
-        Debug.Log("Player selected option " + optionNumber);
 
         questionSection.CheckAnswer(optionNumber);
     }
