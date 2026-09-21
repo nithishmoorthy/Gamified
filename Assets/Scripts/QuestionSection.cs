@@ -2,38 +2,51 @@ using UnityEngine;
 
 public class QuestionSection : MonoBehaviour
 {
-    public int questionIndex;
-    public int correctAnswer;
-
     public AudioClip correctSound;
     public AudioClip wrongSound;
 
     private AudioSource audioSource;
+
     private string questionText;
+    private int correctAnswer;
 
     private bool answered = false;
+    private bool isLastQuestion = false;
 
     void Awake()
     {
         audioSource = GetComponent<AudioSource>();
     }
 
-    public void Setup(int index, string question, int correctAnswerFromFirebase)
+    public void Setup(
+        string question,
+        int correctAnswerFromFirebase,
+        bool lastQuestion
+    )
     {
-        questionIndex = index;
         questionText = question;
         correctAnswer = correctAnswerFromFirebase;
+        isLastQuestion = lastQuestion;
 
         answered = false;
+
+        Debug.Log(
+            "Question loaded into " + gameObject.name
+        );
     }
 
     public void ShowQuestion()
     {
-        QuestionDisplay display = FindAnyObjectByType<QuestionDisplay>();
+        QuestionDisplay display =
+            FindAnyObjectByType<QuestionDisplay>();
 
         if (display != null)
         {
             display.ShowQuestion(questionText);
+        }
+        else
+        {
+            Debug.LogError("QuestionDisplay not found!");
         }
     }
 
@@ -46,21 +59,42 @@ public class QuestionSection : MonoBehaviour
 
         if (selectedOption == correctAnswer)
         {
-            Debug.Log("Q" + (questionIndex + 1) + " - CORRECT ANSWER!");
+            Debug.Log("CORRECT ANSWER!");
 
-            if (correctSound != null)
+            if (correctSound != null && audioSource != null)
             {
                 audioSource.PlayOneShot(correctSound);
             }
         }
         else
         {
-            Debug.Log("Q" + (questionIndex + 1) + " - WRONG ANSWER!");
+            Debug.Log("WRONG ANSWER!");
 
-            if (wrongSound != null)
+            if (wrongSound != null && audioSource != null)
             {
                 audioSource.PlayOneShot(wrongSound);
             }
+        }
+
+        // If this is the final question
+        if (isLastQuestion)
+        {
+            CompleteLevel();
+        }
+    }
+
+    void CompleteLevel()
+    {
+        QuestionManager questionManager =
+            FindAnyObjectByType<QuestionManager>();
+
+        if (questionManager != null)
+        {
+            questionManager.CompleteLevel();
+        }
+        else
+        {
+            Debug.LogError("QuestionManager not found!");
         }
     }
 }

@@ -2,7 +2,13 @@ using UnityEngine;
 
 public class QuestionStartTrigger : MonoBehaviour
 {
-    public QuestionSection questionSection;
+    private QuestionSection questionSection;
+
+    void Awake()
+    {
+        questionSection =
+            GetComponentInParent<QuestionSection>();
+    }
 
     private void OnTriggerEnter(Collider other)
     {
@@ -12,7 +18,12 @@ public class QuestionStartTrigger : MonoBehaviour
         if (questionSection != null)
         {
             questionSection.ShowQuestion();
-            Debug.Log("Triggered!");
+        }
+        else
+        {
+            Debug.LogError(
+                "QuestionSection not found!"
+            );
         }
     }
 }

@@ -8,7 +8,8 @@ public class AnswerTrigger : MonoBehaviour
 
     void Awake()
     {
-        questionSection = GetComponentInParent<QuestionSection>();
+        questionSection =
+            GetComponentInParent<QuestionSection>();
     }
 
     private void OnTriggerEnter(Collider other)
@@ -18,10 +19,11 @@ public class AnswerTrigger : MonoBehaviour
 
         if (questionSection == null)
         {
-            Debug.LogError("QuestionSection not found!");
+            Debug.LogError(
+                "QuestionSection not found!"
+            );
             return;
         }
-
 
         questionSection.CheckAnswer(optionNumber);
     }
