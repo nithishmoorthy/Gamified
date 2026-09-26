@@ -475,7 +475,7 @@ GameObject:
   - component: {fileID: 601050210}
   - component: {fileID: 601050209}
   m_Layer: 5
-  m_Name: Text (Legacy)
+  m_Name: Topic
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -530,10 +530,12 @@ MonoBehaviour:
     m_Alignment: 4
     m_AlignByGeometry: 0
     m_RichText: 1
-    m_HorizontalOverflow: 0
-    m_VerticalOverflow: 0
+    m_HorizontalOverflow: 1
+    m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: 'Chapter 1: Photosynthesis'
+  m_Text: 'JEE Physics
+
+    Level - Easy'
 --- !u!222 &601050210
 CanvasRenderer:
   m_ObjectHideFlags: 0
