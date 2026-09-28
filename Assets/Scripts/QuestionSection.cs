@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 
 public class QuestionSection : MonoBehaviour
 {
@@ -11,7 +12,8 @@ public class QuestionSection : MonoBehaviour
     private int correctAnswer;
 
     private bool answered = false;
-    private bool isLastQuestion = false;
+
+    private QuestionManager questionManager;
 
     void Awake()
     {
@@ -26,13 +28,20 @@ public class QuestionSection : MonoBehaviour
     {
         questionText = question;
         correctAnswer = correctAnswerFromFirebase;
-        isLastQuestion = lastQuestion;
 
         answered = false;
 
         Debug.Log(
-            "Question loaded into " + gameObject.name
+            "Question loaded into " +
+            gameObject.name
         );
+    }
+
+    public void SetQuestionManager(
+        QuestionManager manager
+    )
+    {
+        questionManager = manager;
     }
 
     public void ShowQuestion()
@@ -46,7 +55,15 @@ public class QuestionSection : MonoBehaviour
         }
         else
         {
-            Debug.LogError("QuestionDisplay not found!");
+            Debug.LogError(
+                "QuestionDisplay not found!"
+            );
+        }
+
+        // Spawn the next question section
+        if (questionManager != null)
+        {
+            questionManager.SpawnNextQuestion(this);
         }
     }
 
@@ -61,7 +78,8 @@ public class QuestionSection : MonoBehaviour
         {
             Debug.Log("CORRECT ANSWER!");
 
-            if (correctSound != null && audioSource != null)
+            if (correctSound != null &&
+                audioSource != null)
             {
                 audioSource.PlayOneShot(correctSound);
             }
@@ -70,31 +88,29 @@ public class QuestionSection : MonoBehaviour
         {
             Debug.Log("WRONG ANSWER!");
 
-            if (wrongSound != null && audioSource != null)
+            if (wrongSound != null &&
+                audioSource != null)
             {
                 audioSource.PlayOneShot(wrongSound);
             }
         }
 
-        // If this is the final question
-        if (isLastQuestion)
-        {
-            CompleteLevel();
-        }
+        // Wait before destroying the QuestionSection
+        StartCoroutine(DestroyAfterDelay());
     }
 
-    void CompleteLevel()
+    IEnumerator DestroyAfterDelay()
     {
-        QuestionManager questionManager =
-            FindAnyObjectByType<QuestionManager>();
+        // Wait 3 seconds so the sound can finish
+        yield return new WaitForSeconds(3f);
 
         if (questionManager != null)
         {
-            questionManager.CompleteLevel();
+            questionManager.RemoveQuestionSection(this);
         }
         else
         {
-            Debug.LogError("QuestionManager not found!");
+            Destroy(gameObject);
         }
     }
 }

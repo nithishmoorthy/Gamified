@@ -2,15 +2,20 @@ using UnityEngine;
 using UnityEngine.UI;
 using Firebase.Firestore;
 using Firebase.Extensions;
+using System.Collections.Generic;
 
 public class QuestionManager : MonoBehaviour
 {
     public Transform player;
     public Text scoretext;
+    public GameObject questionSectionPrefab;
 
     private FirebaseFirestore db;
 
-    private QuestionSection[] questionSections;
+    private List<QuestionSection> questionSections =
+        new List<QuestionSection>();
+
+    private int nextQuestionNumber = 1;
 
     private bool levelCompleted = false;
 
@@ -18,95 +23,231 @@ public class QuestionManager : MonoBehaviour
     {
         db = FirebaseFirestore.DefaultInstance;
 
-        // Find all QuestionSection prefabs in the scene
-        questionSections =
-            FindObjectsByType<QuestionSection>(FindObjectsSortMode.None);
+        // Find the QuestionSections manually placed in the scene
+        QuestionSection[] existingSections =
+            FindObjectsByType<QuestionSection>(
+                FindObjectsSortMode.None
+            );
 
-        // Arrange them according to their position on the track
-        System.Array.Sort(questionSections, (a, b) =>
-            a.transform.position.z.CompareTo(b.transform.position.z));
+        // Sort them by Z position
+        System.Array.Sort(
+            existingSections,
+            (a, b) =>
+                a.transform.position.z.CompareTo(
+                    b.transform.position.z
+                )
+        );
 
-        Debug.Log("QuestionSections found: " + questionSections.Length);
-
-        LoadQuestions();
-    }
-
-    void LoadQuestions()
-    {
-        for (int i = 0; i < questionSections.Length; i++)
+        // Store the initial sections
+        foreach (QuestionSection section in existingSections)
         {
-            string documentID = "Q" + (i + 1).ToString("000");
+            questionSections.Add(section);
+        }
 
-            int sectionIndex = i;
+        Debug.Log(
+            "Initial QuestionSections: " +
+            questionSections.Count
+        );
 
-            db.Collection("Questions")
-                .Document(documentID)
-                .GetSnapshotAsync()
-                .ContinueWithOnMainThread(task =>
-                {
-                    if (task.IsCompletedSuccessfully)
-                    {
-                        DocumentSnapshot snapshot = task.Result;
-
-                        if (snapshot.Exists)
-                        {
-                            string question =
-                                snapshot.GetValue<string>("Question");
-
-                            string option1 =
-                                snapshot.GetValue<string>("Option 1");
-
-                            string option2 =
-                                snapshot.GetValue<string>("Option 2");
-
-                            string option3 =
-                                snapshot.GetValue<string>("Option 3");
-
-                            int correctAnswer =
-                                snapshot.GetValue<int>("correctAnswer");
-
-                            string fullQuestion =
-                                question + "\n" +
-                                "1. " + option1 + "      " +
-                                "2. " + option2 + "      " +
-                                "3. " + option3;
-
-                            // Check if this is the final question
-                            bool isLastQuestion =
-                                sectionIndex == questionSections.Length - 1;
-
-                            questionSections[sectionIndex].Setup(
-                                fullQuestion,
-                                correctAnswer,
-                                isLastQuestion
-                            );
-
-                            Debug.Log(
-                                documentID +
-                                " loaded into QuestionSection " +
-                                (sectionIndex + 1)
-                            );
-                        }
-                        else
-                        {
-                            Debug.LogError(
-                                "Firebase document not found: " +
-                                documentID
-                            );
-                        }
-                    }
-                    else
-                    {
-                        Debug.LogError(
-                            "Failed to load " +
-                            documentID
-                        );
-                    }
-                });
+        // Load the first questions
+        foreach (QuestionSection section in questionSections)
+        {
+            LoadInitialQuestion(section);
         }
     }
 
-    // Called by the final QuestionSection
+    void LoadInitialQuestion(QuestionSection section)
+    {
+        string documentID =
+            "Q" + nextQuestionNumber.ToString("000");
+
+        int currentQuestionNumber = nextQuestionNumber;
+
+        nextQuestionNumber++;
+
+        db.Collection("Questions")
+            .Document(documentID)
+            .GetSnapshotAsync()
+            .ContinueWithOnMainThread(task =>
+            {
+                if (!task.IsCompletedSuccessfully)
+                {
+                    Debug.LogError(
+                        "Failed to load " + documentID
+                    );
+
+                    return;
+                }
+
+                DocumentSnapshot snapshot = task.Result;
+
+                // No question exists
+                if (!snapshot.Exists)
+                {
+                    Debug.Log(
+                        "No more questions found: " +
+                        documentID
+                    );
+
+                    Destroy(section.gameObject);
+
+                    questionSections.Remove(section);
+
+                    if (questionSections.Count == 0)
+                    {
+                        CompleteLevel();
+                    }
+
+                    return;
+                }
+
+                SetupQuestion(
+                    section,
+                    snapshot,
+                    documentID
+                );
+            });
+    }
+
+    void SetupQuestion(
+        QuestionSection section,
+        DocumentSnapshot snapshot,
+        string documentID
+    )
+    {
+        string question =
+            snapshot.GetValue<string>("Question");
+
+        string option1 =
+            snapshot.GetValue<string>("Option 1");
+
+        string option2 =
+            snapshot.GetValue<string>("Option 2");
+
+        string option3 =
+            snapshot.GetValue<string>("Option 3");
+
+        int correctAnswer =
+            snapshot.GetValue<int>("correctAnswer");
+
+        string fullQuestion =
+            question + "\n" +
+            "1. " + option1 + "      " +
+            "2. " + option2 + "      " +
+            "3. " + option3;
+
+        section.Setup(
+            fullQuestion,
+            correctAnswer,
+            false
+        );
+
+        section.SetQuestionManager(this);
+
+        Debug.Log(
+            documentID +
+            " loaded into " +
+            section.gameObject.name
+        );
+    }
+
+    public void SpawnNextQuestion(
+        QuestionSection currentSection
+    )
+    {
+        if (levelCompleted)
+            return;
+
+        // Only the last currently spawned section
+        // can request a new section.
+        if (questionSections.Count == 0)
+            return;
+
+        if (currentSection !=
+            questionSections[questionSections.Count - 1])
+            return;
+
+        string documentID =
+            "Q" + nextQuestionNumber.ToString("000");
+
+        // FIRST check Firebase.
+        // We do NOT create a GameObject yet.
+        db.Collection("Questions")
+            .Document(documentID)
+            .GetSnapshotAsync()
+            .ContinueWithOnMainThread(task =>
+            {
+                if (!task.IsCompletedSuccessfully)
+                {
+                    Debug.LogError(
+                        "Failed to check " + documentID
+                    );
+
+                    return;
+                }
+
+                DocumentSnapshot snapshot = task.Result;
+
+                // Question does NOT exist.
+                // Therefore do NOT spawn another section.
+                if (!snapshot.Exists)
+                {
+                    Debug.Log(
+                        "No more questions. " +
+                        "Level complete!"
+                    );
+
+                    CompleteLevel();
+
+                    return;
+                }
+
+                // Question exists.
+                // NOW create the QuestionSection.
+                Vector3 spawnPosition =
+                    currentSection.transform.position +
+                    new Vector3(0f, 0f, 102f);
+
+                GameObject newSectionObject =
+                    Instantiate(
+                        questionSectionPrefab,
+                        spawnPosition,
+                        currentSection.transform.rotation
+                    );
+
+                QuestionSection newSection =
+                    newSectionObject.GetComponent<QuestionSection>();
+
+                questionSections.Add(newSection);
+
+                // Move to the next question number
+                nextQuestionNumber++;
+
+                SetupQuestion(
+                    newSection,
+                    snapshot,
+                    documentID
+                );
+
+                Debug.Log(
+                    documentID +
+                    " spawned successfully."
+                );
+            });
+    }
+
+    public void RemoveQuestionSection(
+        QuestionSection section
+    )
+    {
+        if (questionSections.Contains(section))
+        {
+            questionSections.Remove(section);
+        }
+
+        Destroy(section.gameObject);
+    }
+
     public void CompleteLevel()
     {
         if (levelCompleted)
@@ -116,6 +257,8 @@ public class QuestionManager : MonoBehaviour
 
         scoretext.text = "Level Complete!";
 
-        Debug.Log("All questions answered! Level Complete!");
+        Debug.Log(
+            "All questions answered! Level Complete!"
+        );
     }
 }
