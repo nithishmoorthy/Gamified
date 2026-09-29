@@ -4,8 +4,8 @@ using UnityEngine.SceneManagement;
 public class Playermovment : MonoBehaviour
 {
     public Rigidbody rb;
-    public float forwardforce = 4000f;
-    public float sideforce = 50f;
+    public float forwardforce = 6000f;
+    public float sideforce = 60f;
 
     // Mobile button states
     private bool mobileForward;
