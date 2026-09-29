@@ -19,17 +19,21 @@ public class QuestionManager : MonoBehaviour
 
     private bool levelCompleted = false;
 
+    // True when Firebase tells us there are no more questions
+    private bool noMoreQuestions = false;
+
+    // The last QuestionSection that contains the final question
+    private QuestionSection finalQuestionSection;
+
     void Start()
     {
         db = FirebaseFirestore.DefaultInstance;
 
-        // Find the QuestionSections manually placed in the scene
         QuestionSection[] existingSections =
             FindObjectsByType<QuestionSection>(
                 FindObjectsSortMode.None
             );
 
-        // Sort them by Z position
         System.Array.Sort(
             existingSections,
             (a, b) =>
@@ -38,7 +42,6 @@ public class QuestionManager : MonoBehaviour
                 )
         );
 
-        // Store the initial sections
         foreach (QuestionSection section in existingSections)
         {
             questionSections.Add(section);
@@ -49,7 +52,6 @@ public class QuestionManager : MonoBehaviour
             questionSections.Count
         );
 
-        // Load the first questions
         foreach (QuestionSection section in questionSections)
         {
             LoadInitialQuestion(section);
@@ -60,8 +62,6 @@ public class QuestionManager : MonoBehaviour
     {
         string documentID =
             "Q" + nextQuestionNumber.ToString("000");
-
-        int currentQuestionNumber = nextQuestionNumber;
 
         nextQuestionNumber++;
 
@@ -81,22 +81,12 @@ public class QuestionManager : MonoBehaviour
 
                 DocumentSnapshot snapshot = task.Result;
 
-                // No question exists
                 if (!snapshot.Exists)
                 {
                     Debug.Log(
                         "No more questions found: " +
                         documentID
                     );
-
-                    Destroy(section.gameObject);
-
-                    questionSections.Remove(section);
-
-                    if (questionSections.Count == 0)
-                    {
-                        CompleteLevel();
-                    }
 
                     return;
                 }
@@ -158,8 +148,9 @@ public class QuestionManager : MonoBehaviour
         if (levelCompleted)
             return;
 
-        // Only the last currently spawned section
-        // can request a new section.
+        if (noMoreQuestions)
+            return;
+
         if (questionSections.Count == 0)
             return;
 
@@ -170,8 +161,6 @@ public class QuestionManager : MonoBehaviour
         string documentID =
             "Q" + nextQuestionNumber.ToString("000");
 
-        // FIRST check Firebase.
-        // We do NOT create a GameObject yet.
         db.Collection("Questions")
             .Document(documentID)
             .GetSnapshotAsync()
@@ -188,25 +177,36 @@ public class QuestionManager : MonoBehaviour
 
                 DocumentSnapshot snapshot = task.Result;
 
-                // Question does NOT exist.
-                // Therefore do NOT spawn another section.
+                // --------------------------------
+                // NO MORE QUESTIONS
+                // --------------------------------
                 if (!snapshot.Exists)
                 {
                     Debug.Log(
                         "No more questions. " +
-                        "Level complete!"
+                        "Waiting for the last question to be answered."
                     );
 
-                    CompleteLevel();
+                    noMoreQuestions = true;
+
+                    // THIS is the important part
+                    finalQuestionSection = currentSection;
+
+                    Debug.Log(
+                        "Final QuestionSection is: " +
+                        currentSection.gameObject.name
+                    );
 
                     return;
                 }
 
-                // Question exists.
-                // NOW create the QuestionSection.
+                // --------------------------------
+                // QUESTION EXISTS
+                // --------------------------------
+
                 Vector3 spawnPosition =
                     currentSection.transform.position +
-                    new Vector3(0f, 0f, 102f);
+                    new Vector3(0f, 0f, 150f);
 
                 GameObject newSectionObject =
                     Instantiate(
@@ -220,7 +220,6 @@ public class QuestionManager : MonoBehaviour
 
                 questionSections.Add(newSection);
 
-                // Move to the next question number
                 nextQuestionNumber++;
 
                 SetupQuestion(
@@ -245,7 +244,28 @@ public class QuestionManager : MonoBehaviour
             questionSections.Remove(section);
         }
 
+        Debug.Log(
+            "Removing QuestionSection: " +
+            section.gameObject.name
+        );
+
         Destroy(section.gameObject);
+
+        // --------------------------------
+        // FINAL QUESTION ANSWERED
+        // --------------------------------
+
+        if (noMoreQuestions &&
+            section == finalQuestionSection)
+        {
+            Debug.Log(
+                "FINAL QUESTION ANSWERED!"
+            );
+
+            CompleteLevel();
+
+            return;
+        }
     }
 
     public void CompleteLevel()
@@ -255,10 +275,10 @@ public class QuestionManager : MonoBehaviour
 
         levelCompleted = true;
 
-        scoretext.text = "Level Complete!";
-
         Debug.Log(
-            "All questions answered! Level Complete!"
+            "ALL QUESTIONS ANSWERED! LEVEL COMPLETE!"
         );
+
+        scoretext.text = "Level Complete!";
     }
 }

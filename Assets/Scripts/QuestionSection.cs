@@ -74,9 +74,19 @@ public class QuestionSection : MonoBehaviour
 
         answered = true;
 
+        QuestionDisplay display =
+            FindAnyObjectByType<QuestionDisplay>();
+
         if (selectedOption == correctAnswer)
         {
             Debug.Log("CORRECT ANSWER!");
+
+            if (display != null)
+            {
+                display.ShowQuestion(
+                    questionText + "\n\nCORRECT!"
+                );
+            }
 
             if (correctSound != null &&
                 audioSource != null)
@@ -88,6 +98,13 @@ public class QuestionSection : MonoBehaviour
         {
             Debug.Log("WRONG ANSWER!");
 
+            if (display != null)
+            {
+                display.ShowQuestion(
+                    questionText + "\n\nWRONG!"
+                );
+            }
+
             if (wrongSound != null &&
                 audioSource != null)
             {
@@ -95,13 +112,11 @@ public class QuestionSection : MonoBehaviour
             }
         }
 
-        // Wait before destroying the QuestionSection
         StartCoroutine(DestroyAfterDelay());
     }
 
     IEnumerator DestroyAfterDelay()
     {
-        // Wait 3 seconds so the sound can finish
         yield return new WaitForSeconds(3f);
 
         if (questionManager != null)
